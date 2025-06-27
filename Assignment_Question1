@@ -1,0 +1,209 @@
+import random
+from datetime import datetime, timedelta
+import statistics
+from collections import Counter
+
+# MyKad Indentification Card number follows the format, YYMMDD-BP-###G
+# 1. Generate random DOB in format YYMMDD
+def generate_dob(start_year=1948, end_year=2025):
+    start_date = datetime(start_year, 1, 1)
+    end_date = datetime(end_year, 12, 31)
+    delta = end_date - start_date
+    random_days = random.randint(0, delta.days)
+    dob = start_date + timedelta(days=random_days)
+    return dob.strftime('%y%m%d')  # Format as YYMMDD
+
+# 2. Valid place of birth codes (example set)
+place_codes = [
+    '01', '02', '03', '04', '05', '06', '07', '08', '09',
+    '10', '11', '12', '13', '14', '15', '16',
+    '21', '22', '23', '24', '25', '26', '27', '28', '29',
+    '30', '31', '32', '33', '34', '35', '36', '37', '38', '39',
+    '40', '41', '42', '43', '44', '45', '46', '47', '48', '49',
+    '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
+    '60', '61', '62', '63', '64', '65', '66', '67', '68',
+    '71', '72', '74', '75', '76', '77', '78', '79',
+    '82', '83', '84', '85', '86', '87', '88', '89', '90', '91',
+    '92', '93', '98', '99'
+]
+
+
+# 3. Generate serial and gender digit
+def generate_serial_and_gender(gender=None):
+    serial = random.randint(0, 999)
+    serial_str = f"{serial:03d}"
+    gender_digit = random.randint(0, 9)
+    return serial_str + str(gender_digit)
+
+# 4. Full IC generator
+def generate_mykad(gender=None, num_digits=12):
+    """Generate a Malaysian IC-like number.
+
+    Parameters
+    ----------
+    gender : str | None
+        Currently kept for API compatibility. Gender is not explicitly used but
+        retained for future extension.
+    num_digits : int, optional
+        Desired length of the generated number. Supported lengths are 12 and
+        16. The default is 12, matching the standard MyKad length. For a
+        16-digit number, an additional 4-digit random segment will be appended
+        to the end.
+    """
+
+    if num_digits not in (12, 16):
+        raise ValueError("num_digits must be either 12 or 16")
+
+    dob = generate_dob()          # 6 digits
+    pb = random.choice(place_codes)  # 2 digits
+    serial = generate_serial_and_gender(gender)  # 4 digits
+
+    ic_number = f"{dob}{pb}{serial}"  # 12-digit base
+
+    # For a 16-digit variant, append an extra 4-digit random segment
+    if num_digits == 16:
+        extra_segment = f"{random.randint(0, 9999):04d}"
+        ic_number += extra_segment
+
+    return ic_number
+
+# Hash function using folding technique
+def hash_ic(ic_number, table_size):
+    # Remove any dashes if present
+    ic = ic_number.replace("-", "")
+    
+    # Folding technique: Split the IC into 3 groups of 4 digits
+    groups = [int(ic[i:i+4]) for i in range(0, len(ic), 4)]
+    
+    # Sum the groups
+    folded_sum = sum(groups)
+    
+    # Compress to fit table size using modulo
+    return folded_sum % table_size
+
+# Function to insert IC numbers into a hash table and count collisions
+def insert_into_hash_table(hash_table, ic_numbers, table_size):
+    collisions = 0
+    collision_indexes = []
+    
+    for ic in ic_numbers:
+        index = hash_ic(ic, table_size)
+        
+        # If the slot is not empty, it's a collision
+        if hash_table[index]:
+            collisions += 1
+            collision_indexes.append(index)
+            hash_table[index].append(ic)
+        else:
+            hash_table[index] = [ic]
+            
+    return collisions, collision_indexes
+
+# Function to analyze collision indexes
+def analyze_collision_indexes(collision_indexes, table_size):
+    if not collision_indexes:
+        return "No collisions occurred."
+    
+    # Count frequency of each collision index
+    collision_counter = Counter(collision_indexes)
+    
+    # Find top 10 most frequent collision indexes
+    most_common = collision_counter.most_common(10)
+    
+    # Calculate some statistics
+    total_unique_collision_spots = len(collision_counter)
+    max_collisions_at_one_index = max(collision_counter.values()) if collision_counter else 0
+    collision_density = total_unique_collision_spots / table_size * 100
+    
+    result = [
+        f"Total unique collision spots: {total_unique_collision_spots} ({collision_density:.2f}% of table)",
+        f"Maximum collisions at a single index: {max_collisions_at_one_index}",
+        f"Top 10 collision hotspots (index: frequency):",
+    ]
+    
+    for index, count in most_common:
+        result.append(f"  Index {index}: {count} collisions")
+    
+    return "\n".join(result)
+
+def run_experiment(ic_length, num_ics, num_rounds, table_size_1, table_size_2):
+    """Run collision experiment for a given IC length and print the results."""
+
+    print("=" * 80)
+    print(f"Experiment for {ic_length}-digit IC numbers")
+    print("=" * 80)
+
+    # Store collision counts for each round
+    collisions_table_1 = []
+    collisions_table_2 = []
+
+    # For storing collision indexes of the last round
+    last_round_collisions_1: list[int] = []
+    last_round_collisions_2: list[int] = []
+
+    for round_num in range(1, num_rounds + 1):
+        # Generate random IC numbers of the specified length
+        ic_numbers = [generate_mykad(num_digits=ic_length) for _ in range(num_ics)]
+
+        # Initialize hash tables as lists of empty lists
+        hash_table_1 = [[] for _ in range(table_size_1)]
+        hash_table_2 = [[] for _ in range(table_size_2)]
+
+        # Insert ICs into both tables and count collisions
+        collisions_1, collision_indexes_1 = insert_into_hash_table(hash_table_1, ic_numbers, table_size_1)
+        collisions_2, collision_indexes_2 = insert_into_hash_table(hash_table_2, ic_numbers, table_size_2)
+
+        # Store collision counts
+        collisions_table_1.append(collisions_1)
+        collisions_table_2.append(collisions_2)
+
+        # Store collision indexes for the last round
+        if round_num == num_rounds:
+            last_round_collisions_1 = collision_indexes_1
+            last_round_collisions_2 = collision_indexes_2
+
+        print(f"Round {round_num}:")
+        print(f"  Table 1 collisions: {collisions_1}")
+        print(f"  Table 2 collisions: {collisions_2}")
+
+    # Calculate average collisions
+    avg_collisions_1 = sum(collisions_table_1) / num_rounds
+    avg_collisions_2 = sum(collisions_table_2) / num_rounds
+
+    print("-" * 60)
+    print("Summary:")
+    print(f"Table 1 (size {table_size_1}) collisions by round: {collisions_table_1}")
+    print(f"Table 2 (size {table_size_2}) collisions by round: {collisions_table_2}")
+    print(f"Average collisions for Table 1: {avg_collisions_1:.2f}")
+    print(f"Average collisions for Table 2: {avg_collisions_2:.2f}")
+    print(f"Standard deviation for Table 1: {statistics.stdev(collisions_table_1):.2f}")
+    print(f"Standard deviation for Table 2: {statistics.stdev(collisions_table_2):.2f}")
+
+    # Analyze collision indexes for the last round
+    print("\n" + "-" * 60)
+    print("Collision Index Analysis (Last Round):")
+    print("\nTable 1 Collision Analysis:")
+    print(analyze_collision_indexes(last_round_collisions_1, table_size_1))
+    print("\nTable 2 Collision Analysis:")
+    print(analyze_collision_indexes(last_round_collisions_2, table_size_2))
+
+    # Calculate load factors
+    load_factor_1 = num_ics / table_size_1
+    load_factor_2 = num_ics / table_size_2
+    print("\n" + "-" * 60)
+    print(f"Load factor for Table 1: {load_factor_1:.4f}")
+    print(f"Load factor for Table 2: {load_factor_2:.4f}")
+
+def main():
+    # Experiment configuration
+    table_size_1 = 1009
+    table_size_2 = 2003
+    num_ics = 1000
+    num_rounds = 10
+
+    # Run experiments for both 12-digit and 16-digit IC numbers
+    for ic_length in (12, 16):
+        run_experiment(ic_length, num_ics, num_rounds, table_size_1, table_size_2)
+
+if __name__ == "__main__":
+    main()
