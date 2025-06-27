@@ -1,0 +1,353 @@
+class Graph:
+    def __init__(self):
+        """
+        Initializes the graph with an empty adjacency list.
+        The adjacency list is a dictionary where keys are vertices
+        and values are sets of adjacent vertices (representing outgoing edges).
+        """
+        self.adjacency_list = {}
+
+    def addVertex(self, vertex):
+        """
+        Adds a new vertex to the graph if it does not already exist.
+        """
+        if vertex not in self.adjacency_list:
+            self.adjacency_list[vertex] = set()
+
+    def addEdge(self, from_vertex, to_vertex):
+        """
+        Adds a directed edge from from_vertex to to_vertex.
+        If either vertex does not exist, it is added to the graph.
+        """
+        if from_vertex not in self.adjacency_list:
+            self.addVertex(from_vertex)
+        if to_vertex not in self.adjacency_list:
+            self.addVertex(to_vertex)
+        self.adjacency_list[from_vertex].add(to_vertex)
+
+    def removeEdge(self, from_vertex, to_vertex):
+        """
+        Removes the directed edge from from_vertex to to_vertex if it exists.
+        """
+        if from_vertex in self.adjacency_list and to_vertex in self.adjacency_list[from_vertex]:
+            self.adjacency_list[from_vertex].remove(to_vertex)
+        # else:
+        # print(f"Edge from {from_vertex} to {to_vertex} does not exist.")
+
+    def listOutgoingAdjacentVertex(self, vertex):
+        """
+        For a given vertex, lists all vertices to which there is an outgoing edge.
+        Returns an empty list if the vertex does not exist or has no outgoing edges.
+        """
+        return list(self.adjacency_list.get(vertex, []))
+
+    def listIncomingAdjacentVertices(self, vertex):
+        """
+        For a given vertex, lists all vertices from which there is an incoming edge (followers).
+        """
+        incoming = []
+        for v, neighbors in self.adjacency_list.items():
+            if vertex in neighbors:
+                incoming.append(v)
+        return incoming
+
+
+class Person:
+    def __init__(self, name, gender, biography, privacy="public"):
+        """
+        Initializes a Person object.
+        Args:
+            name (str): The name of the person.
+            gender (str): The gender of the person.
+            biography (str): A short biography of the person.
+            privacy (str): Profile privacy setting, "public" or "private".
+        """
+        self.name = name
+        self.gender = gender
+        self.biography = biography
+        self.privacy = privacy.lower()
+
+    def __str__(self):
+        """
+        Returns a string representation of the person's full profile details.
+        """
+        return (f"Name: {self.name}\n"
+                f"Gender: {self.gender}\n"
+                f"Biography: {self.biography}\n"
+                f"Privacy: {self.privacy.capitalize()}")
+
+    def __repr__(self):
+        """
+        Returns a concise representation of the Person object, useful for debugging.
+        """
+        return f"Person('{self.name}')"
+
+    def __hash__(self):
+        """
+        Allows Person objects to be used as keys in dictionaries or elements in sets.
+        Hashing is based on the person's name, assuming names are unique.
+        """
+        return hash(self.name)
+
+    def __eq__(self, other):
+        """
+        Defines equality between Person objects based on their names.
+        """
+        if isinstance(other, Person):
+            return self.name == other.name
+        return False
+
+    def display_profile(self, ignore_privacy=False):
+        """
+        Displays the person's profile.
+        If ignore_privacy is True, all details are shown.
+        Otherwise, if the profile is private, only the name is shown.
+        """
+        if not ignore_privacy and self.privacy == 'private':
+            return f"Name: {self.name} (Private Profile - Details Hidden)"
+        return str(self)
+
+
+def create_initial_profiles():
+    """
+    Creates and returns a list of initial Person objects.
+    """
+    profiles = [
+        Person("Wei Xun", "Female", "#INTI CS Student", "public"),
+        Person("Kai Shuang", "Female", "#Happy Go Lucky", "public"),
+        Person("Lin Xuan", "Female", "I'm not lazy, just saving energy!", "private"),
+        Person("Eric", "Male", "Be yourself~", "public"),
+        Person("Yao Sheng", "Male", "Hello world!", "private"),
+        Person("Hong Zheng", "Male", "Resilient and resourceful.", "public")
+    ]
+    return profiles
+
+
+def initialize_social_graph(profiles):
+    """
+    Creates a graph, adds profiles as vertices, and establishes initial follow relationships.
+    """
+    social_graph = Graph()
+    name_to_person_map = {}
+
+    for person in profiles:
+        social_graph.addVertex(person)
+        name_to_person_map[person.name] = person
+
+    # Create some follow relationships (Mimicking Instagram)
+    if "Wei Xun" in name_to_person_map and "Lin Xuan" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Wei Xun"], name_to_person_map["Lin Xuan"])
+    if "Wei Xun" in name_to_person_map and "Eric" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Wei Xun"], name_to_person_map["Eric"])
+
+
+    if "Lin Xuan" in name_to_person_map and "Wei Xun" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Lin Xuan"], name_to_person_map["Wei Xun"])
+
+
+    if "Kai Shuang" in name_to_person_map and "Eric" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Kai Shuang"], name_to_person_map["Eric"])
+    if "Kai Shuang" in name_to_person_map and "Wei Xun" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Kai Shuang"], name_to_person_map["Wei Xun"])
+
+
+    for person_name, person_obj in name_to_person_map.items():
+        if person_name != "Eric" and person_name != "Kai Shuang":
+            if "Eric" in name_to_person_map:
+                social_graph.addEdge(name_to_person_map["Eric"], person_obj)
+
+
+    if "Hong Zheng" in name_to_person_map and "Wei Xun" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Hong Zheng"], name_to_person_map["Wei Xun"])
+
+
+    if "Yao Sheng" in name_to_person_map and "Wei Xun" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Yao Sheng"], name_to_person_map["Wei Xun"])
+    if "Yao Sheng" in name_to_person_map and "Lin Xuan" in name_to_person_map:
+        social_graph.addEdge(name_to_person_map["Yao Sheng"], name_to_person_map["Lin Xuan"])
+
+    return social_graph, name_to_person_map
+
+# Mandatory Features
+def display_all_user_names(persons_map):
+    print("\n✦✦✦ List of All User Names ✦✦✦")
+    if not persons_map:
+        print("No users in the system.")
+        return
+    for name in persons_map.keys():
+        print(name)
+
+
+def view_user_profile_detail(persons_map):
+    print("\n✦✦✦ View User Profile in Detail ✦✦✦")
+    name_to_view = input("Enter the name of the user to view: ")
+    person = persons_map.get(name_to_view)
+    if person:
+        # Mandatory: Ignore privacy and display all information
+        print(person.display_profile(ignore_privacy=True))
+    else:
+        print(f"User '{name_to_view}' not found.")
+
+
+def view_user_profile_privacy_aware(persons_map):
+    print("\n✦✦✦ View User Profile (Privacy Aware) ✦✦✦")
+    name_to_view = input("Enter the name of the user to view: ")
+    person = persons_map.get(name_to_view)
+    if person:
+        # Advanced feature: Respect privacy settings
+        print(person.display_profile(ignore_privacy=False))
+    else:
+        print(f"User '{name_to_view}' not found.")
+
+
+def view_followed_accounts(graph, persons_map):
+    print("\n✦✦✦ View Followed Accounts ✦✦✦")
+    name_to_check = input("Enter the name of the user: ")
+    person = persons_map.get(name_to_check)
+    if person:
+        followed_list = graph.listOutgoingAdjacentVertex(person)
+        if followed_list:
+            print(f"\n{person.name} is following:")
+            for followed_person in followed_list:
+                print(f"- {followed_person.name}")
+        else:
+            print(f"{person.name} is not following anyone.")
+    else:
+        print(f"User '{name_to_check}' not found.")
+
+
+def view_followers(graph, persons_map):
+    print("\n✦✦✦ View Followers ✦✦✦")
+    name_to_check = input("Enter the name of the user: ")
+    person = persons_map.get(name_to_check)
+    if person:
+        followers_list = graph.listIncomingAdjacentVertices(person)
+        if followers_list:
+            print(f"\nFollowers of {person.name}:")
+            for follower_person in followers_list:
+                print(f"- {follower_person.name}")
+        else:
+            print(f"{person.name} has no followers.")
+    else:
+        print(f"User '{name_to_check}' not found.")
+
+
+# Advanced Features
+def add_user_profile(graph, persons_map, persons_list_ref):
+    print("\n✦✦✦ Add New User Profile ✦✦✦")
+    name = input("Enter name: ")
+    if name in persons_map:
+        print(f"User '{name}' already exists.")
+        return
+    gender = input("Enter gender: ")
+    biography = input("Enter biography: ")
+    privacy_choice = input("Enter privacy (public/private, defaults to public): ").lower()
+    privacy = 'private' if privacy_choice == 'private' else 'public'
+
+    new_person = Person(name, gender, biography, privacy)
+    graph.addVertex(new_person)
+    persons_map[name] = new_person
+    persons_list_ref.append(new_person)  # Assuming persons_list_ref is a list holding all person objects if needed elsewhere
+    print(f"User '{name}' added successfully.")
+
+
+def user_follow_user(graph, persons_map):
+    print("\n✦✦✦ Follow Another User ✦✦✦")
+    follower_name = input("Enter your name (the follower): ")
+    to_follow_name = input("Enter the name of the user you want to follow: ")
+
+    follower_person = persons_map.get(follower_name)
+    to_follow_person = persons_map.get(to_follow_name)
+
+    if not follower_person:
+        print(f"User '{follower_name}' not found.")
+        return
+    if not to_follow_person:
+        print(f"User '{to_follow_name}' not found.")
+        return
+    if follower_person == to_follow_person:
+        print("You cannot follow yourself.")
+        return
+
+    graph.addEdge(follower_person, to_follow_person)
+    print(f"{follower_name} is now following {to_follow_name}.")
+
+
+def user_unfollow_user(graph, persons_map):
+    print("\n✦✦✦ Unfollow Another User ✦✦✦")
+    follower_name = input("Enter your name (the unfollower): ")
+    to_unfollow_name = input("Enter the name of the user you want to unfollow: ")
+
+    follower_person = persons_map.get(follower_name)
+    to_unfollow_person = persons_map.get(to_unfollow_name)
+
+    if not follower_person:
+        print(f"User '{follower_name}' not found.")
+        return
+    if not to_unfollow_person:
+        print(f"User '{to_unfollow_name}' not found.")
+        return
+
+    # Check if they are actually following before trying to remove
+    if to_unfollow_person not in graph.listOutgoingAdjacentVertex(follower_person):
+        print(f"{follower_name} is not currently following {to_unfollow_name}.")
+        return
+
+    graph.removeEdge(follower_person, to_unfollow_person)
+    print(f"{follower_name} has unfollowed {to_unfollow_name}.")
+
+
+def main_menu():
+    initial_profiles = create_initial_profiles()
+    social_graph, persons_map = initialize_social_graph(initial_profiles)
+    # persons_list is useful if we need the original list structure for some reason
+    # but persons_map is generally more useful for lookups.
+    # For add_user_profile, we might want to update a central list if it's used by display_all_user_names
+    # Let's make display_all_user_names use persons_map.keys() for consistency.
+
+    while True:
+        print("\n========== 5003 Social App Menu ==========")
+        print("⊹ ࣪ ˖ Mandatory Features ⊹ ࣪ ˖")
+        print("1. Display all user names")
+        print("2. View user profile (detailed, ignores privacy)")
+        print("3. View followed accounts of a user")
+        print("4. View followers of a user")
+        print("\n⊹ ࣪ ˖ Advanced Features ⊹ ࣪ ˖")
+        print("5. Add a new user profile")
+        print("6. View user profile (respects privacy)")  # Added for advanced feature b demonstration
+        print("7. Follow another user")
+        print("8. Unfollow another user")
+        print("9. Exit")
+        print("==========================================")
+
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            display_all_user_names(persons_map)
+        elif choice == '2':
+            view_user_profile_detail(persons_map)
+        elif choice == '3':
+            view_followed_accounts(social_graph, persons_map)
+        elif choice == '4':
+            view_followers(social_graph, persons_map)
+        elif choice == '5':
+            # Pass persons_map and the original list (initial_profiles)
+            # if we want to maintain a list in addition to the map.
+            # For simplicity, add_user_profile will update persons_map directly.
+            # If display_all_user_names iterates keys of persons_map, it's fine.
+            add_user_profile(social_graph, persons_map, initial_profiles)
+        elif choice == '6':
+            view_user_profile_privacy_aware(persons_map)
+        elif choice == '7':
+            user_follow_user(social_graph, persons_map)
+        elif choice == '8':
+            user_unfollow_user(social_graph, persons_map)
+        elif choice == '9':
+            print("Exiting 5003 Social App. Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+
+if __name__ == "__main__":
+    main_menu()
